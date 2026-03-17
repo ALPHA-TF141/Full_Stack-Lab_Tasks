@@ -1,0 +1,40 @@
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+
+# Eclipse files
+.metadata
+.classpath
+.project
+.settings/
+
+# IntelliJ (just in case)
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+
+# Application properties (optional if sensitive)
+# src/main/resources/application.properties
+
+# Node (if frontend later)
+node_modules/
+
+# Build
+build/
+
+# Temp files
+*.tmp
+*.swp
