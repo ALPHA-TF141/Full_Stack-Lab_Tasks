@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Home</title>
+</head>
+<body>
+<h2>Employee Management</h2>
+<form action="/employee" method="get">
+    <input type="number" name="id" required>
+    <button type="submit">Search</button>
+</form>
+<p>Try: 101, 102</p>
+<p style="color:red" th:text="${error}"></p>
+</body>
+</html>
