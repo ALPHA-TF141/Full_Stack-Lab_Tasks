@@ -162,6 +162,18 @@ Frontend ➝ API ➝ Backend ➝ DB
 
 ---
 
+## 🚀 Task 14: Microservices Architecture
+
+### 🔄 Flow:
+
+Service ➝ Eureka Server ➝ Service Discovery ➝ Inter-Service Communication
+
+(or)
+
+Order Service ➝ Eureka ➝ Identity Service
+
+---
+
 # 🧠 Skills Gained
 
 - ✅ Full-stack development  
