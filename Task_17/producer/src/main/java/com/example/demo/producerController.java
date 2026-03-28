@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 
 public class producerController {
+	
 	@GetMapping("/message")
 	public ResponseEntity<String> getMessage() {
 		return ResponseEntity.ok("Hello from Producer Microservice!");

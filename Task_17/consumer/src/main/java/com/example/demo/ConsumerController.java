@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -10,13 +11,16 @@ public class ConsumerController {
 	@Autowired
 	private ConsumerService consumerService;
 
-	public ConsumerService getConsumerService() {
-		return consumerService;
-	}
+	@GetMapping("/message")
+	public String consumeMessage() {
+        return consumerService.getMessageFromProducer();
+    }
 
-	public void setConsumerService(ConsumerService consumerService) {
-		this.consumerService = consumerService;
-	}
+	@GetMapping("/error")
+	public String consumeError() {
+        return consumerService.getErrorfromProducer();
+    }
+
 	
 	
 }
