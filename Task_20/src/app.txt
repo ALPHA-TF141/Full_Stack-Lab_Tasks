@@ -1,0 +1,9 @@
+Sample Project
+Version: 1.0
+
+Modules:
+- User login
+- Payment processing
+- Order management
+
+This file is used to demonstrate branching, merging, rebasing, and conflict resolution.

@@ -1,0 +1,7 @@
+Feature Branch: feature/login-ui
+
+Changes introduced in this branch:
+
+- added login page planning
+- updated user authentication notes
+- prepared branch-specific changes for merge
