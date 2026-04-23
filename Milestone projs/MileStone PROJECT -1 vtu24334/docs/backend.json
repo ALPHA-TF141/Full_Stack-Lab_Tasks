@@ -1,0 +1,64 @@
+
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "An inventory item in the catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "averageDailySales": { "type": "number" },
+        "leadTimeDays": { "type": "number" },
+        "safetyStock": { "type": "number" },
+        "supplierId": { "type": "string" }
+      },
+      "required": ["name", "category", "price", "quantity", "supplierId"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "A vendor providing products",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["name", "contactName", "email"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A stock movement event (purchase or sale)",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "type": { "type": "string", "enum": ["purchase", "sale"] },
+        "quantity": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["productId", "productName", "type", "quantity", "date"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of inventory products"
+    },
+    "/suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "Collection of product suppliers"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Records of all inventory movements"
+    }
+  }
+}
