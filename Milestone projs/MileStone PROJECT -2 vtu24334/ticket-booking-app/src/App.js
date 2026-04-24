@@ -22,6 +22,7 @@ function App() {
   });
   const [errors, setErrors] = useState({});
   const [bookingSummary, setBookingSummary] = useState(null);
+  const [bookingHistory, setBookingHistory] = useState([]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -48,12 +49,16 @@ function App() {
       const tickets = parseInt(formData.tickets);
       const totalAmount = tickets * event.price;
       setAvailableTickets(availableTickets - tickets);
-      setBookingSummary({
+      const newBooking = {
         name: formData.name,
+        email: formData.email,
+        department: formData.department,
         eventName: event.name,
         tickets: tickets,
         totalAmount: totalAmount
-      });
+      };
+      setBookingSummary(newBooking);
+      setBookingHistory((prevBookings) => [...prevBookings, newBooking]);
       // Reset form
       setFormData({
         name: '',
@@ -74,28 +79,48 @@ function App() {
     });
     setErrors({});
     setBookingSummary(null);
+    setBookingHistory([]);
+    setAvailableTickets(event.availableTickets);
   };
 
   return (
     <div className="App">
       <h1>Ticket Booking for Internal Department Event</h1>
       <EventDetails event={{ ...event, availableTickets }} />
-      {!bookingSummary ? (
-        <BookingForm
-          formData={formData}
-          setFormData={setFormData}
-          onSubmit={handleSubmit}
-          errors={errors}
-          onReset={handleReset}
-        />
-      ) : (
+      <BookingForm
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleSubmit}
+        errors={errors}
+        onReset={handleReset}
+      />
+
+      {bookingSummary && (
         <div className="booking-confirmation">
-          <h2>Booking Confirmed!</h2>
+          <h2>Latest Booking Confirmed!</h2>
           <p><strong>Name:</strong> {bookingSummary.name}</p>
+          <p><strong>Email:</strong> {bookingSummary.email}</p>
+          <p><strong>Department:</strong> {bookingSummary.department}</p>
           <p><strong>Event:</strong> {bookingSummary.eventName}</p>
           <p><strong>Tickets Booked:</strong> {bookingSummary.tickets}</p>
-          <p><strong>Total Amount:</strong> ${bookingSummary.totalAmount}</p>
-          <button onClick={() => setBookingSummary(null)}>Book More Tickets</button>
+          <p><strong>Total Amount:</strong> Rs.{bookingSummary.totalAmount}</p>
+        </div>
+      )}
+
+      {bookingHistory.length > 0 && (
+        <div className="booking-confirmation">
+          <h2>All Ticket Bookings</h2>
+          {bookingHistory.map((booking, index) => (
+            <div key={index}>
+              <p><strong>Booking #{index + 1}</strong></p>
+              <p><strong>Name:</strong> {booking.name}</p>
+              <p><strong>Email:</strong> {booking.email}</p>
+              <p><strong>Department:</strong> {booking.department}</p>
+              <p><strong>Event:</strong> {booking.eventName}</p>
+              <p><strong>Tickets Booked:</strong> {booking.tickets}</p>
+              <p><strong>Total Amount:</strong> Rs.{booking.totalAmount}</p>
+            </div>
+          ))}
         </div>
       )}
     </div>
