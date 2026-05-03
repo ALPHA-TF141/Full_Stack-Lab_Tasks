@@ -2,6 +2,69 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## MySQL Booking Backend Setup
+
+This project includes a Node/Express backend that stores OTP verification ids and ticket dispatch details in MySQL.
+
+### 1. Create the database
+
+Open MySQL Workbench/phpMyAdmin/terminal and run:
+
+```sql
+SOURCE database/schema.sql;
+```
+
+If `SOURCE` is not available, open `database/schema.sql`, copy the SQL, and run it.
+
+### 2. Configure database login
+
+Copy `.env.example` to `.env` and update your MySQL password:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=ticket_booking_db
+DB_PORT=3306
+SERVER_PORT=5000
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_16_character_gmail_app_password
+```
+
+For Gmail, do not use your normal Gmail password. Turn on 2-Step Verification in your Google account, then create an App Password for Mail. Use that 16-character app password as `SMTP_PASS`.
+
+### 3. Run backend and frontend
+
+Open one terminal for the backend:
+
+```bash
+npm run server
+```
+
+Open a second terminal for React:
+
+```bash
+npm start
+```
+
+React runs at `http://localhost:3000` and the backend API runs at `http://localhost:5000`.
+
+### Stored data
+
+OTP verification records are stored in `otp_verifications`.
+
+Final ticket dispatch records are stored in `bookings`, including `booking_code`, `otp_verification_id`, `ticket_start_number`, and `ticket_end_number`.
+
+To see the latest dispatched ticket:
+
+```sql
+SELECT * FROM last_ticket_dispatched;
+```
+
 ## Available Scripts
 
 In the project directory, you can run:

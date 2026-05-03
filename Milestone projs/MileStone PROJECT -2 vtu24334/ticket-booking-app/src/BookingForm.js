@@ -1,6 +1,15 @@
 import React from 'react';
+import OtpVerification from './OtpVerification';
 
-const BookingForm = ({ formData, setFormData, onSubmit, errors, onReset }) => {
+const BookingForm = ({
+  formData,
+  setFormData,
+  onSubmit,
+  errors,
+  onReset,
+  isOtpVerified,
+  onOtpVerified
+}) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -32,6 +41,10 @@ const BookingForm = ({ formData, setFormData, onSubmit, errors, onReset }) => {
           />
           {errors.email && <span className="error">{errors.email}</span>}
         </div>
+        <OtpVerification
+          email={formData.email}
+          onVerified={onOtpVerified}
+        />
         <div>
           <label>Department:</label>
           <input
@@ -55,7 +68,12 @@ const BookingForm = ({ formData, setFormData, onSubmit, errors, onReset }) => {
           />
           {errors.tickets && <span className="error">{errors.tickets}</span>}
         </div>
-        <button type="submit">Book Tickets</button>
+        <p className={isOtpVerified ? 'otp-status verified' : 'otp-status pending'}>
+          OTP Status: {isOtpVerified ? 'Verified' : 'Verification Required'}
+        </p>
+        {errors.otp && <span className="error">{errors.otp}</span>}
+        {errors.submit && <span className="error">{errors.submit}</span>}
+        <button type="submit" disabled={!isOtpVerified}>Book Tickets</button>
         <button type="button" onClick={onReset}>Reset</button>
       </form>
     </div>
