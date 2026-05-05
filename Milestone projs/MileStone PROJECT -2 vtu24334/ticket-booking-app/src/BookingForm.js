@@ -8,7 +8,8 @@ const BookingForm = ({
   errors,
   onReset,
   isOtpVerified,
-  onOtpVerified
+  onOtpVerified,
+  event
 }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,7 +18,7 @@ const BookingForm = ({
 
   return (
     <div className="booking-form">
-      <h2>Book Tickets</h2>
+      <h2>Book Tickets for {event.name}</h2>
       <form onSubmit={onSubmit}>
         <div>
           <label>Name:</label>
@@ -64,6 +65,7 @@ const BookingForm = ({
             value={formData.tickets}
             onChange={handleChange}
             min="1"
+            max={event.availableTickets}
             required
           />
           {errors.tickets && <span className="error">{errors.tickets}</span>}

@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const pool = require('./db');
 const { sendOtpEmail } = require('./mailer');
+const events = require('./events');
 
 const app = express();
 const port = Number(process.env.SERVER_PORT || 5000);
@@ -14,6 +15,31 @@ const asyncHandler = (handler) => (req, res, next) => {
 app.use(cors());
 app.use(express.json());
 
+const getEventAvailability = async () => {
+  const [rows] = await pool.execute(
+    'SELECT event_name, COALESCE(SUM(tickets), 0) AS booked_tickets FROM bookings GROUP BY event_name'
+  );
+  const bookedByEvent = rows.reduce((eventTotals, row) => ({
+    ...eventTotals,
+    [row.event_name]: Number(row.booked_tickets)
+  }), {});
+
+  return events.map((event) => {
+    const bookedTickets = bookedByEvent[event.name] || 0;
+
+    return {
+      ...event,
+      bookedTickets,
+      availableTickets: Math.max(event.totalTickets - bookedTickets, 0)
+    };
+  });
+};
+
+const findLiveEvent = async (eventId) => {
+  const liveEvents = await getEventAvailability();
+  return liveEvents.find((event) => event.id === eventId);
+};
+
 app.get('/api/health', asyncHandler(async (req, res) => {
   try {
     await pool.query('SELECT 1');
@@ -21,6 +47,33 @@ app.get('/api/health', asyncHandler(async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Database connection failed', error: error.message });
   }
+}));
+
+app.get('/api/events', asyncHandler(async (req, res) => {
+  res.json(await getEventAvailability());
+}));
+
+app.get('/api/bookings', asyncHandler(async (req, res) => {
+  const [rows] = await pool.execute(
+    `SELECT
+      id,
+      booking_code AS bookingCode,
+      name,
+      email,
+      department,
+      event_name AS eventName,
+      venue,
+      ticket_price AS ticketPrice,
+      tickets,
+      total_amount AS totalAmount,
+      ticket_start_number AS ticketStartNumber,
+      ticket_end_number AS ticketEndNumber,
+      dispatched_at AS dispatchedAt
+    FROM bookings
+    ORDER BY dispatched_at DESC, id DESC`
+  );
+
+  res.json(rows);
 }));
 
 app.post('/api/otp/send', asyncHandler(async (req, res) => {
@@ -72,22 +125,31 @@ app.post('/api/bookings', asyncHandler(async (req, res) => {
     name,
     email,
     department,
-    eventName,
-    venue,
-    ticketPrice,
+    eventId,
     tickets,
     otpVerificationId
   } = req.body;
 
   const ticketCount = Number(tickets);
-  const price = Number(ticketPrice);
 
-  if (!name || !email || !department || !eventName || !venue || !otpVerificationId) {
+  if (!name || !email || !department || !eventId || !otpVerificationId) {
     return res.status(400).json({ message: 'All booking fields are required' });
+  }
+
+  const event = await findLiveEvent(eventId);
+
+  if (!event) {
+    return res.status(400).json({ message: 'Selected event is not available' });
   }
 
   if (!Number.isInteger(ticketCount) || ticketCount <= 0) {
     return res.status(400).json({ message: 'Tickets must be a positive number' });
+  }
+
+  if (ticketCount > event.availableTickets) {
+    return res.status(400).json({
+      message: `Only ${event.availableTickets} tickets are available for ${event.name}`
+    });
   }
 
   const [verifiedRows] = await pool.execute(
@@ -105,7 +167,7 @@ app.post('/api/bookings', asyncHandler(async (req, res) => {
 
   const ticketStartNumber = lastRows.length ? lastRows[0].ticket_end_number + 1 : 1;
   const ticketEndNumber = ticketStartNumber + ticketCount - 1;
-  const totalAmount = ticketCount * price;
+  const totalAmount = ticketCount * event.price;
   const bookingCode = `BK${Date.now()}`;
 
   const [result] = await pool.execute(
@@ -119,9 +181,9 @@ app.post('/api/bookings', asyncHandler(async (req, res) => {
       name,
       email,
       department,
-      eventName,
-      venue,
-      price,
+      event.name,
+      event.venue,
+      event.price,
       ticketCount,
       totalAmount,
       ticketStartNumber,
@@ -135,10 +197,12 @@ app.post('/api/bookings', asyncHandler(async (req, res) => {
     name,
     email,
     department,
-    eventName,
-    venue,
+    eventId: event.id,
+    eventName: event.name,
+    venue: event.venue,
     tickets: ticketCount,
     totalAmount,
+    availableTickets: event.availableTickets - ticketCount,
     ticketStartNumber,
     ticketEndNumber,
     otpVerificationId

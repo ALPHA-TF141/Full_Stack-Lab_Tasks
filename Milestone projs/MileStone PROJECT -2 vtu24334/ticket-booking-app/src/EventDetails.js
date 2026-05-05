@@ -9,7 +9,8 @@ const EventDetails = ({ event }) => {
       <p><strong>Date & Time:</strong> {event.dateTime}</p>
       <p><strong>Venue:</strong> {event.venue}</p>
       <p><strong>Ticket Price:</strong> Rs.{event.price}</p>
-      <p><strong>Available Tickets:</strong> {event.availableTickets}</p>
+      <p><strong>Total Tickets:</strong> {event.totalTickets}</p>
+      <p className="live-ticket-count"><strong>Live Available Tickets:</strong> {event.availableTickets}</p>
     </div>
   );
 };

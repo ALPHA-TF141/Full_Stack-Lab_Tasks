@@ -65,6 +65,40 @@ To see the latest dispatched ticket:
 SELECT * FROM last_ticket_dispatched;
 ```
 
+## Optional Spring Boot Security Demo
+
+This project also includes a small optional Spring Boot service in `spring-security-demo`.
+It does not replace the existing Node/Express backend. It is a lightweight add-on that demonstrates a protected API endpoint using Spring Security.
+
+### Run the Spring Boot service
+
+Make sure Java 17+ and Maven are installed, then run:
+
+```bash
+cd spring-security-demo
+mvn spring-boot:run
+```
+
+The Spring Boot service runs on `http://localhost:8081`.
+
+Public health check:
+
+```bash
+curl http://localhost:8081/api/security/health
+```
+
+Protected security status endpoint:
+
+```bash
+curl -H "X-DEMO-API-KEY: change-this-demo-key" http://localhost:8081/api/security/status
+```
+
+The demo API key is configured in:
+
+```text
+spring-security-demo/src/main/resources/application.properties
+```
+
 ## Available Scripts
 
 In the project directory, you can run:

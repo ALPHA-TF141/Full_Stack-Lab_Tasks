@@ -1,24 +1,15 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import EventDetails from './EventDetails';
 import BookingForm from './BookingForm';
 import VenueMap from './VenueMap';
 import Chatbot from './Chatbot';
+import defaultEvents from './events';
 
 function App() {
-  const [event] = useState({
-    name: 'Tech Fest 2023',
-    department: 'Computer Science Engineering',
-    dateTime: 'October 15, 2023, 10:00 AM',
-    venue: 'Veltech University Auditorium',
-    price: 100,
-    availableTickets: 50,
-    mapLabel: 'Veltech University, ORR Service Road, Morai, Ambattur, Tamil Nadu',
-    mapUrl: 'https://www.openstreetmap.org/export/embed.html?bbox=80.09697318077089%2C13.176126182014016%2C80.10109305381776%2C13.17788900370179&layer=mapnik&marker=13.176435%2C80.097713',
-    mapLink: 'https://www.openstreetmap.org/search?query=Veltech+University%2C+ORR+Service+Road%2C+Morai%2C+Ambattur%2C+%E0%AE%A4%E0%AE%BF%E0%AE%B0%E0%AF%81%E0%AE%B5%E0%AE%B3%E0%AF%8D%E0%AE%B3%E0%AF%82%E0%AE%B0%E0%AF%8D+%E0%AE%AE%E0%AE%BE%E0%AE%B5%E0%AE%9F%E0%AF%8D%E0%AE%9F%E0%AE%AE%E0%AF%8D%2C+Tamil+Nadu%2C+600055%2C+India&zoom=19&minlon=80.09697318077089&minlat=13.176126182014016&maxlon=80.10109305381776&maxlat=13.17788900370179#map=17/13.176435/80.097713'
-  });
-
-  const [availableTickets, setAvailableTickets] = useState(event.availableTickets);
+  const [events, setEvents] = useState(defaultEvents);
+  const [selectedEventId, setSelectedEventId] = useState(defaultEvents[0].id);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,9 +18,70 @@ function App() {
   });
   const [errors, setErrors] = useState({});
   const [bookingSummary, setBookingSummary] = useState(null);
-  const [bookingHistory, setBookingHistory] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [otpVerificationId, setOtpVerificationId] = useState(null);
+
+  const selectedEvent = useMemo(
+    () => events.find((event) => event.id === selectedEventId) || events[0],
+    [events, selectedEventId]
+  );
+
+  const refreshEvents = useCallback(async () => {
+    try {
+      setIsLoadingEvents(true);
+      const response = await fetch('/api/events');
+      const latestEvents = await response.json();
+
+      if (!response.ok) {
+        throw new Error(latestEvents.message || 'Unable to load events');
+      }
+
+      const eventsWithMapDetails = latestEvents.map((event) => ({
+        ...defaultEvents.find((defaultEvent) => defaultEvent.id === event.id),
+        ...event
+      }));
+
+      setEvents(eventsWithMapDetails);
+    } catch (error) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        events: 'Using local event list because live event count could not be loaded.'
+      }));
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshEvents();
+  }, [refreshEvents]);
+
+  const refreshBookings = useCallback(async () => {
+    try {
+      setIsLoadingBookings(true);
+      const response = await fetch('/api/bookings');
+      const latestBookings = await response.json();
+
+      if (!response.ok) {
+        throw new Error(latestBookings.message || 'Unable to load bookings');
+      }
+
+      setBookings(latestBookings);
+    } catch (error) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        bookings: 'Unable to load booking sheet from database.'
+      }));
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshBookings();
+  }, [refreshBookings]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -43,8 +95,8 @@ function App() {
     const tickets = parseInt(formData.tickets);
     if (!formData.tickets || tickets <= 0) {
       newErrors.tickets = 'Number of tickets must be a positive number';
-    } else if (tickets > availableTickets) {
-      newErrors.tickets = `Only ${availableTickets} tickets available`;
+    } else if (tickets > selectedEvent.availableTickets) {
+      newErrors.tickets = `Only ${selectedEvent.availableTickets} tickets available for ${selectedEvent.name}`;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -75,9 +127,7 @@ function App() {
             name: formData.name,
             email: formData.email,
             department: formData.department,
-            eventName: event.name,
-            venue: event.venue,
-            ticketPrice: event.price,
+            eventId: selectedEvent.id,
             tickets,
             otpVerificationId
           })
@@ -88,9 +138,13 @@ function App() {
           throw new Error(savedBooking.message || 'Unable to save booking');
         }
 
-        setAvailableTickets(availableTickets - tickets);
         setBookingSummary(savedBooking);
-        setBookingHistory((prevBookings) => [...prevBookings, savedBooking]);
+        setBookings((prevBookings) => [savedBooking, ...prevBookings]);
+        setEvents((prevEvents) => prevEvents.map((event) => (
+          event.id === savedBooking.eventId
+            ? { ...event, availableTickets: savedBooking.availableTickets }
+            : event
+        )));
         setFormData({
           name: '',
           email: '',
@@ -100,6 +154,8 @@ function App() {
         setIsOtpVerified(false);
         setOtpVerificationId(null);
         setErrors({});
+        refreshEvents();
+        refreshBookings();
       } catch (error) {
         setErrors((prevErrors) => ({
           ...prevErrors,
@@ -118,17 +174,55 @@ function App() {
     });
     setErrors({});
     setBookingSummary(null);
-    setBookingHistory([]);
-    setAvailableTickets(event.availableTickets);
     setIsOtpVerified(false);
     setOtpVerificationId(null);
+    refreshEvents();
+  };
+
+  const handleEventChange = (eventId) => {
+    setSelectedEventId(eventId);
+    setFormData((prevFormData) => ({ ...prevFormData, tickets: '' }));
+    setBookingSummary(null);
+    setErrors({});
   };
 
   return (
     <div className="App">
-      <h1>Ticket Booking for Internal Department Event</h1>
-      <EventDetails event={{ ...event, availableTickets }} />
-      <VenueMap event={event} />
+      <h1>Ticket Booking for Department Events</h1>
+      <div className="browse-events">
+        <div>
+          <h2>Browse Events</h2>
+          <p>{isLoadingEvents ? 'Refreshing live ticket counts...' : 'Choose an event and book from the live availability.'}</p>
+        </div>
+        <select
+          aria-label="Browse events"
+          onChange={(e) => handleEventChange(e.target.value)}
+          value={selectedEvent.id}
+        >
+          {events.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.name} - {event.availableTickets} tickets left
+            </option>
+          ))}
+        </select>
+      </div>
+      {errors.events && <p className="error">{errors.events}</p>}
+      <div className="event-grid">
+        {events.map((event) => (
+          <button
+            className={event.id === selectedEvent.id ? 'event-card active' : 'event-card'}
+            key={event.id}
+            onClick={() => handleEventChange(event.id)}
+            type="button"
+          >
+            <span>{event.name}</span>
+            <strong>{event.availableTickets}</strong>
+            <small>tickets left</small>
+          </button>
+        ))}
+      </div>
+      <EventDetails event={selectedEvent} />
+      <VenueMap event={selectedEvent} />
       <BookingForm
         formData={formData}
         setFormData={(nextFormData) => {
@@ -144,8 +238,9 @@ function App() {
         onReset={handleReset}
         isOtpVerified={isOtpVerified}
         onOtpVerified={handleOtpVerified}
+        event={selectedEvent}
       />
-      <Chatbot event={{ ...event, availableTickets }} />
+      <Chatbot event={selectedEvent} events={events} />
 
       {bookingSummary && (
         <div className="booking-confirmation">
@@ -156,31 +251,66 @@ function App() {
           <p><strong>Event:</strong> {bookingSummary.eventName}</p>
           <p><strong>Tickets Booked:</strong> {bookingSummary.tickets}</p>
           <p><strong>Total Amount:</strong> Rs.{bookingSummary.totalAmount}</p>
+          <p><strong>Tickets Still Available:</strong> {bookingSummary.availableTickets}</p>
           <p><strong>Booking Code:</strong> {bookingSummary.bookingCode}</p>
           <p><strong>Dispatched Tickets:</strong> #{bookingSummary.ticketStartNumber} to #{bookingSummary.ticketEndNumber}</p>
           <p><strong>OTP Verified ID:</strong> {bookingSummary.otpVerificationId}</p>
         </div>
       )}
 
-      {bookingHistory.length > 0 && (
-        <div className="booking-confirmation">
-          <h2>All Ticket Bookings</h2>
-          {bookingHistory.map((booking, index) => (
-            <div key={index}>
-              <p><strong>Booking #{index + 1}</strong></p>
-              <p><strong>Name:</strong> {booking.name}</p>
-              <p><strong>Email:</strong> {booking.email}</p>
-              <p><strong>Department:</strong> {booking.department}</p>
-              <p><strong>Event:</strong> {booking.eventName}</p>
-              <p><strong>Tickets Booked:</strong> {booking.tickets}</p>
-              <p><strong>Total Amount:</strong> Rs.{booking.totalAmount}</p>
-              <p><strong>Booking Code:</strong> {booking.bookingCode}</p>
-              <p><strong>Dispatched Tickets:</strong> #{booking.ticketStartNumber} to #{booking.ticketEndNumber}</p>
-              <p><strong>OTP Verified ID:</strong> {booking.otpVerificationId}</p>
-            </div>
-          ))}
+      <div className="booking-confirmation booking-sheet">
+        <div className="sheet-header">
+          <div>
+            <h2>All Ticket Bookings</h2>
+            <p>{isLoadingBookings ? 'Loading booking sheet...' : `${bookings.length} booking records`}</p>
+          </div>
+          <button type="button" onClick={refreshBookings}>Refresh Sheet</button>
         </div>
-      )}
+        {errors.bookings && <p className="error">{errors.bookings}</p>}
+        <div className="sheet-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Booking Code</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Event</th>
+                <th>Venue</th>
+                <th>Ticket Price</th>
+                <th>Tickets</th>
+                <th>Total Amount</th>
+                <th>Ticket Numbers</th>
+                <th>Booked At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.length === 0 && (
+                <tr>
+                  <td colSpan="12">No bookings saved yet.</td>
+                </tr>
+              )}
+              {bookings.map((booking, index) => (
+                <tr key={booking.id || booking.bookingCode}>
+                  <td>{index + 1}</td>
+                  <td>{booking.bookingCode}</td>
+                  <td>{booking.name}</td>
+                  <td>{booking.email}</td>
+                  <td>{booking.department}</td>
+                  <td>{booking.eventName}</td>
+                  <td>{booking.venue}</td>
+                  <td>Rs.{booking.ticketPrice || selectedEvent.price}</td>
+                  <td>{booking.tickets}</td>
+                  <td>Rs.{booking.totalAmount}</td>
+                  <td>#{booking.ticketStartNumber} - #{booking.ticketEndNumber}</td>
+                  <td>{booking.dispatchedAt ? new Date(booking.dispatchedAt).toLocaleString() : 'Just now'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
